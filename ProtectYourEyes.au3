@@ -10,15 +10,15 @@ Global $powerOn = 0
 Global $screenSaveActive , $screenSaverIsSecure
 
 
-$ini = parse_ini_file("configure.ini", true)
-Local $powerOnTime = Number($ini[$ini[0]("Time")]("PowerOnTime")) *1000
-Local $waitTime = Number($ini[$ini[0]("Time")]("WaitTime")) * 1000
-Local $delayTime = Number($ini[$ini[0]("Time")]("DelayTime")) * 1000
+$ini = parse_ini_file("configure.ini", true, $INI_SCANNER_TYPED)
+Local $powerOnTime = $ini[$ini[0]("Time")]("PowerOnTime") *1000
+Local $waitTime = $ini[$ini[0]("Time")]("WaitTime") * 1000
+Local $delayTime = $ini[$ini[0]("Time")]("DelayTime") * 1000
 Local $tempOff = $powerOnTime / $waitTime
 Local $powerOnMax = ($powerOnTime + $delayTime) / $waitTime
 
-Global $screenSaver = Number($ini[$ini[0]("ScreenSaver")]("Process"))
-Global $restoreScreenSaver = Number($ini[$ini[0]("ScreenSaver")]("Restore"))
+Global $screenSaver = $ini[$ini[0]("ScreenSaver")]("Process")
+Global $restoreScreenSaver = $ini[$ini[0]("ScreenSaver")]("Restore")
 
 
 HotKeySet($ini[$ini[0]("HotKeys")]("Monitor_OFF"), "_Monitor_OFF")
@@ -31,14 +31,17 @@ EndIf
 While 1
 	If $powerOn > $powerOnMax Then
 		;關閉螢幕
+		ProgressOff()
 		_Monitor_OFF()
 	Else
 		If $powerOn =  $tempOff Then 
 			_Monitor_Temp_Off()
+			ProgressOn("Protect Your Eyes", "Screen will turn off", "Press " & $ini[$ini[0]("HotKeys")]("Quit") & " to exit this program.", @DesktopWidth/2-150 ,@DesktopHeight/2-50 , 16)
 		EndIf
 		$powerOn = $powerOn + 1
 		Sleep($WaitTime)
-	EndIf
+		If $powerOn > $tempOff Then ProgressSet(100*($powerOn-$tempOff)/($powerOnMax-$tempOff))
+	EndIf 
 WEnd
 
 Func _Monitor_Temp_Off()

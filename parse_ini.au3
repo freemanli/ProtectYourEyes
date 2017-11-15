@@ -4,7 +4,7 @@
  Author:         Freeman
 
  Script Function:
-	parse_ini_file($filename, $process_section)
+	parse_ini_file($filename, $process_section, $scanner_mode)
 	Similar to php parse_ini_file loads in the ini file specified in filename, and returns the settings in it in an associative dictionary object.
 	*** Dictionaries object cannot be multidimensional, Arrays can
 	The variable type of All of the value in the ini file is STRING.
@@ -30,12 +30,15 @@
 	Else 
 		$ini =  {	"key"	: value	}
 		取 keyB 的值
-		$ini["keyB"]
+		$ini("keyB")
 	EndIf
 
 #ce ----------------------------------------------------------------------------
+Global Const $INI_SCANNER_NORMAL = 0	; 修改 boolean 值為 "1" 和 ""，以及去掉引號
+Global Const $INI_SCANNER_RAW	 = 1	; 不做任何修改
+Global Const $INI_SCANNER_TYPED	 = 2	; 修改為 boolean 值，去掉引號和更換變數類型
 
-Func parse_ini_file($filename, $process_section)
+Func parse_ini_file($filename, $process_section, $scanner_mode)
 	Local $i, $j, $key, $debugStr =""
 	Local $readSectionNames, $readSection
 	$readSectionNames = IniReadSectionNames($filename)
@@ -56,12 +59,13 @@ Func parse_ini_file($filename, $process_section)
 			$parsedini[$i] = ObjCreate("Scripting.Dictionary")
 			$readSection =  IniReadSection($filename, $readSectionNames[$i])
 			If @error Then
-				$parsedini[$i](0) = 0		; 此段解讀錯誤，所以設為 0
+				; 此段解讀錯誤，所以設為 false
+				$parsedini[$i](0) = false		
 			Else
-				$parsedini[$i](0) = $readSection[0][0]
+				; $parsedini[$i](0) = $readSection[0][0]
 				For $j = 1 To $readSection[0][0]
-					$parsedini[$i]($j)	=	$readSection[$j][0]
-					$parsedini[$i]($readSection[$j][0]) = $readSection[$j][1]
+					; $parsedini[$i]($j)	=	$readSection[$j][0]
+					$parsedini[$i]($readSection[$j][0]) = _scanner($readSection[$j][1], $scanner_mode)
 				Next
 			EndIf
 		Next
@@ -70,13 +74,49 @@ Func parse_ini_file($filename, $process_section)
 		For $i = 1 To $readSectionNames[0]
 			$readSection =  IniReadSection($filename, $readSectionNames[$i])
 			If @error Then
-				; 此段解讀錯誤
+				; 此段解讀錯誤，所以設為 false
+				$parsedini($readSection[$j][0]) = false
 			Else
 				For $j = 1 To $readSection[0][0]
-					$parsedini($readSection[$j][0]) = $readSection[$j][1]
+					$parsedini($readSection[$j][0]) = _scanner($readSection[$j][1], $scanner_mode)
 				Next
 			EndIf
 		Next
 	EndIf
 	return $parsedini
+EndFunc
+; INI_SCANNER_NORMAL 	int(0)
+; INI_SCANNER_RAW		int(1)
+; INI_SCANNER_TYPED		int(2)
+Func _scanner($data, $mode)
+	If $mode = 1 Then 
+		Return $data
+	Else
+		$dataLower = StringLower($data)
+		Select
+			Case ($dataLower="true" OR $dataLower="yes")
+				If $mode = 2 Then
+					Return true
+				Else
+					Return "1"
+				EndIf
+			Case ($dataLower="null" OR $dataLower="no" OR $dataLower="false")
+				If $mode = 2 Then
+					Return false
+				Else 
+					Return ""
+				EndIf
+			Case Else
+				If (StringLeft($data,1) = '"' AND StringRight($data,1)='"') OR _
+					(StringLeft($data,1) = "'" AND StringRight($data,1)="'") Then
+					Return StringTrimLeft(StringTrimRight($data, 1), 1)
+				Else
+					If IsNumber($data) AND $mode=2 Then
+						Return Number($data)
+					Else
+						Return $data
+					EndIf
+				EndIf
+		EndSelect
+	EndIf
 EndFunc
