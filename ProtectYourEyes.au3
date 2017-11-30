@@ -69,6 +69,7 @@ Func _Monitor_ON()
 												'int', $lciSC_MonitorPower, _
 												'int', $lciPower_On)
 	$powerOn = 0
+	ProgressOff()
 EndFunc
 
 Func _Monitor_OFF()
